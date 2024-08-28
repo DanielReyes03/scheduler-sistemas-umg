@@ -1,0 +1,9 @@
+version: '2.29.2'
+
+services:
+  ubuntu:
+    build: .
+    command: tail -F /dev/null
+    volumes:
+      - ./file.txt:/usr/app/file.txt
+
