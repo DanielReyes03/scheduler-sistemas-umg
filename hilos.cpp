@@ -105,8 +105,8 @@ bool validarLineaMixta(const string &linea) {
         }
         contador++;
     }
-    // Debe haber exactamente 7 elementos: 2 enteros, 1 cadena y 4 enteros
-    return contador == 7;
+    // Debe haber exactamente 8 elementos: 2 enteros, 1 cadena y 5 enteros
+    return contador == 8;
 }
 
 // Función para convertir una línea de valores mezclados en un vector de enteros y una cadena
@@ -185,7 +185,7 @@ int main() {
         }
 
         if (!validarLineaMixta(linea)) {
-            cout << "Error: Línea de valores incorrecta (deben ser 2 enteros, una cadena y 4 enteros)" << endl;
+            cout << "Error: Línea de valores incorrecta (deben ser 2 enteros, una cadena y 5 enteros)" << endl;
             archivo.close();
             return 1;
         }
