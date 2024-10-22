@@ -1,5 +1,6 @@
 # ninja log v6
-14	3379	7503631345598483	CMakeFiles/scheduler_sistemas_umg.dir/hilos.cpp.obj	ebee9679f7378632
-3385	3853	7503631379302553	scheduler_sistemas_umg.exe	ef19fad9519e044d
-13	1479	7503638710007958	CMakeFiles/scheduler_sistemas_umg.dir/hilos.cpp.obj	ebee9679f7378632
-1480	1721	7503638724676508	scheduler_sistemas_umg.exe	ef19fad9519e044d
+61	1777	7513211251729228	CMakeFiles/scheduler_sistemas_umg.dir/hilos.cpp.obj	ebee9679f7378632
+1778	2303	7513211268894309	scheduler_sistemas_umg.exe	ef19fad9519e044d
+20	485	7513218642214231	build.ninja	886adf9dca610bd2
+49	1289	7513218644032593	CMakeFiles/scheduler_sistemas_umg.dir/main.cpp.obj	968a89e9f17fd8e0
+1290	1641	7513218656437561	scheduler_sistemas_umg.exe	b5372bd617df9d04

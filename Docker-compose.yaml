@@ -5,5 +5,5 @@ services:
     build: .
     command: tail -F /dev/null
     volumes:
-      - ./file.txt:/usr/app/file.txt
+      - ./data.dat:/usr/app/data.dat
 
