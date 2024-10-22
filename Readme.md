@@ -8,7 +8,7 @@ Este programa está diseñado para leer y procesar un archivo de texto que conti
 ### Requerimientos del sistema 💻
 Para la correcta ejecución del programa se necesita que el sistema operativo cuente con estos requerimientos mínimos
 Sistema operativo (Windows, Linux, macOS, etc.)
-Copular de C++ compartible con c++11 o superior
+Compilador de C++ compartible con c++11 o superior
 Instalación de bibliotecas usadas dentro del proyecto (pthread)
 Git para la clonación del proyecto
 
