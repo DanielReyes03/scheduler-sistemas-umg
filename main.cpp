@@ -6,7 +6,7 @@
 #include <vector>
 #include <queue>
 #include <pthread.h>
-#include <unistd.h>  // Para usar sleep ( SIMULA EL TIEMPO DE ESPERA PARA EJECUCION)
+#include <unistd.h>  // Para usar sleep (SIMULA EL TIEMPO DE ESPERA PARA EJECUCION)
 
 using namespace std;
 
@@ -15,6 +15,7 @@ using namespace std;
 struct Proceso {
     vector<int> datos;
     string cadena;
+    int iteraciones_restantes;  // Nuevas iteraciones restantes (según el último valor del vector datos)
 };
 
 // Estructura para pasar parámetros a los hilos
@@ -23,10 +24,13 @@ struct ThreadData {
 };
 
 // Cola de procesos compartida entre los hilos
-queue<Proceso> colaProcesos;
+queue<Proceso> cola_procesos;
 
 // Mutex para proteger el acceso a la cola de procesos
-pthread_mutex_t mutexCola = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_cola = PTHREAD_MUTEX_INITIALIZER;
+
+// Valor del quantum ya declarado
+int quantum = 6;
 
 // Función que ejecuta cada hilo
 void *thread_function(void *arg) {
@@ -34,34 +38,44 @@ void *thread_function(void *arg) {
     int id_hilo = data->id_hilo;
 
     while (true) {
-        pthread_mutex_lock(&mutexCola);
+        pthread_mutex_lock(&mutex_cola);
 
         // Si la cola está vacía, el hilo termina
-        if (colaProcesos.empty()) {
-            pthread_mutex_unlock(&mutexCola);
+        if (cola_procesos.empty()) {
+            pthread_mutex_unlock(&mutex_cola);
             break;
         }
 
         // Tomar un proceso de la cola
-        Proceso proceso = colaProcesos.front();
-        colaProcesos.pop();
+        Proceso proceso = cola_procesos.front();
+        cola_procesos.pop();
 
-        pthread_mutex_unlock(&mutexCola);
+        pthread_mutex_unlock(&mutex_cola);
 
-        // Obtener el último dígito del último valor del proceso
-        int vecesEjecutar = proceso.datos.back() % 10;
+        // El número de iteraciones que tiene que ejecutar el proceso, limitado por el quantum
+        int iteraciones_a_ejecutar = min(quantum, proceso.iteraciones_restantes);
 
-        // Simulación de ejecución del proceso 'vecesEjecutar' veces
-        for (int i = 0; i < vecesEjecutar; i++) {
-            printf("Hilo %d ejecutando proceso %d veces: ", id_hilo + 1, vecesEjecutar);
+        // Simulación de ejecución del proceso 'iteraciones_a_ejecutar' veces
+        for (int i = 0; i < iteraciones_a_ejecutar; i++) {
+            printf("Hilo %d ejecutando proceso (Iteracion %d/%d): ", id_hilo + 1, i + 1, iteraciones_a_ejecutar);
             for (int valor : proceso.datos) {
                 printf("%d ", valor);
             }
             printf("| %s\n", proceso.cadena.c_str());
 
-            sleep(2);  // Simular que tarda en ejecutarse
+            sleep(1);  // Simular que tarda en ejecutarse
+        }
 
-            printf("Hilo %d termino la ejecucion %d de %d veces.\n", id_hilo + 1, i + 1, vecesEjecutar);
+        // Actualizar las iteraciones restantes
+        proceso.iteraciones_restantes -= iteraciones_a_ejecutar;
+
+        // Si el proceso no ha terminado, volver a insertarlo en la cola
+        if (proceso.iteraciones_restantes > 0) {
+            pthread_mutex_lock(&mutex_cola);
+            cola_procesos.push(proceso);
+            pthread_mutex_unlock(&mutex_cola);
+        } else {
+            printf("Hilo %d completo el proceso.\n", id_hilo + 1);
         }
     }
 
@@ -89,7 +103,7 @@ bool validarFormatoLinea(const string &linea, const string &palabra) {
 }
 
 // Función para validar que una línea siga el formato
-bool validarLineaMixta(const string &linea) {
+bool analizar_linea(const string &linea) {
     stringstream ss(linea);
     string token;
     int contador = 0;
@@ -134,25 +148,25 @@ int convertirLineaAMixta(const string &linea, vector<int> &arreglo, string &cade
 // INICIO DEL PROGRAMA
 int main() {
     ifstream archivo;
-    string nombreArchivo;
+    string nombre_archivo;
     string linea;
     vector<int> procesadores(1);
     vector<int> hilos(1);
     Proceso procesos[MAX_PROCESOS];  // Arreglo para almacenar los procesos
-    int numProcesos = 0;
+    int num_procesos = 0;
 
     // Pedimos el nombre del archivo
     cout << "Ingrese el nombre del archivo: ";
-    cin >> nombreArchivo;
+    cin >> nombre_archivo;
 
     // Validamos que el archivo sea .dat
-    if (nombreArchivo.find(".dat") == string::npos) {
+    if (nombre_archivo.find(".dat") == string::npos) {
         cout << "Error: El archivo debe tener extension .dat" << endl;
         return 1;
     }
 
     // Abrimos el archivo para leer
-    archivo.open(nombreArchivo);
+    archivo.open(nombre_archivo);
     if (!archivo) {
         cout << "Error al abrir el archivo" << endl;
         return 1;
@@ -182,6 +196,8 @@ int main() {
         hilos[0] = stoi(linea.substr(strlen("Hilos=")));
     }
 
+    // Ignoramos la lectura de quantum desde el archivo, porque ya está declarado con valor 6
+
     // Ignoramos líneas vacías antes de leer los procesos
     while (getline(archivo, linea)) {
         linea.erase(linea.find_last_not_of("\n") + 1); // Quitamos el salto de línea
@@ -189,52 +205,43 @@ int main() {
             continue;  // Ignorar línea vacía
         }
 
-        if (!validarLineaMixta(linea)) {
+        if (!analizar_linea(linea)) {
             cout << "Error: Linea de valores incorrecta (deben ser 2 enteros, una cadena y 5 enteros)" << endl;
             archivo.close();
             return 1;
         }
 
         // Convertimos la línea de valores a un arreglo y cadena
-        convertirLineaAMixta(linea, procesos[numProcesos].datos, procesos[numProcesos].cadena);
+        convertirLineaAMixta(linea, procesos[num_procesos].datos, procesos[num_procesos].cadena);
+
+        // Asignamos el número de iteraciones restantes al proceso usando el último entero del arreglo
+        procesos[num_procesos].iteraciones_restantes = procesos[num_procesos].datos.back();
 
         // Insertamos el proceso en la cola
-        colaProcesos.push(procesos[numProcesos]);
+        cola_procesos.push(procesos[num_procesos]);
 
-        numProcesos++;
+        num_procesos++;
     }
 
     archivo.close();
 
-    // Imprimimos los resultados
-    cout << "Procesadores: " << procesadores[0] << endl;
-    cout << "Hilos: " << hilos[0] << endl;
-    cout << "Procesos:" << endl;
-    for (int i = 0; i < numProcesos; i++) {
-        cout << "Proceso " << i + 1 << ": ";
-        for (int j = 0; j < procesos[i].datos.size(); j++) {
-            cout << procesos[i].datos[j] << " ";  // Imprimir los enteros
-        }
-        cout << "| " << procesos[i].cadena << endl;  // Imprimir la cadena
-    }
-
-    cout << "" << endl;
-
-    // EJECUCION DE LOS HILOS
-    pthread_t threads[hilos[0]];
-    ThreadData threadData[hilos[0]];
+    // Calcular el número total de hilos
+    int total_hilos = procesadores[0] * hilos[0];
+    pthread_t threads[total_hilos];
+    ThreadData thread_data[total_hilos];
 
     // Crear los hilos
-    for (int i = 0; i < hilos[0]; i++) {
-        threadData[i].id_hilo = i;
-        pthread_create(&threads[i], NULL, thread_function, &threadData[i]);
+    for (int i = 0; i < total_hilos; i++) {
+        thread_data[i].id_hilo = i;
+        pthread_create(&threads[i], NULL, thread_function, (void *) &thread_data[i]);
     }
 
-    // Esperar a que todos los hilos terminen
-    for (int i = 0; i < hilos[0]; i++) {
+    // Esperar a que los hilos terminen
+    for (int i = 0; i < total_hilos; i++) {
         pthread_join(threads[i], NULL);
     }
-    cout << "" << endl;
-    cout << "Se han ejecutado todos los procesos con exito" << endl;
+
+    cout << "Todos los procesos han sido completados." << endl;
+
     return 0;
 }
